@@ -18,3 +18,6 @@ The default CyberArk scanning module lacks detailed information about group perm
 While CyberArk provides a mechanism to access more comprehensive data, it's important to clarify that this solution is not an official part of the CyberArk product. It serves as an illustrative example of how to extract specific data from raw log files.
 Furthermore, when nested groups are discovered within privileged groups, the provided script only identifies the nested group. It falls upon the client to determine which Active Directory users are members of that group.
 Automating this enhanced solution for Windows domain scanning can be a complex and challenging task, and in some cases, it may be impossible to fully automate.
+
+
+https://cyberark.my.site.com/s/article/Find-All-Users-and-Groups-in-Privileged-Groups-from-Machine-Scan-Logs-Skip-to-end-of-metadata
