@@ -1,0 +1,20 @@
+Overview
+The CyberArk CPM engine connects to Active Directory, where it retrieves information about created accounts, groups, and a list of computers. Subsequently, the engine attempts to establish connections to each server using domain credentials. Using various techniques, it assesses whether the domain account inherits permissions in any manner, granting it access to local administrator or other privileged groups on Windows systems.
+The challenge for domain and local accounts
+- Numerous adjustments may be required on target Windows Servers as many of protocols that are used for scanning purpose often are part of servers’ hardenings. This specifically applies for productions servers. 
+Windows domain scan characteristics
+By default, the scanning module doesn't provide information about the groups to which permissions have been added. It only indicates that an account has been found within a privileged group somewhere and marks it as such. 
+<screen>
+CyberArk offers a mechanism to obtain more comprehensive data, which can be accessed through the following link: CyberArk Documentation.
+However, it's important to note that this solution isn't part of the CyberArk product; it's merely an example of how to extract more specific data by analyzing raw log files. Additionally, if a group is discovered nested within any of the privileged groups mentioned above, the script will only provide the name of the nested group. It's then the responsibility of the client to determine which Active Directory (AD) users belong to that group.
+Automating this enhanced solution may prove to be challenging or even impossible.
+Windows local account discovery characteristics.
+The Account Discovery module for local accounts simply collects data about local account information and their memberships. This can be easily accomplished using an agent-based solution like Puppet.
+
+Summary
+Discovering local accounts in Windows environments is a relatively straightforward process. The Account Discovery module designed for local accounts efficiently collects data about local account information and their associated memberships. This task can be accomplished seamlessly using agent-based solutions like Puppet, eliminating the need for additional tools and changes on the servers.
+Conversely, Windows domain scanning presents specific challenges that are not easily addressed by Puppet-like solutions. In such scenarios, CyberArk's solution can play a vital role, but certain limitations must be considered:
+The default CyberArk scanning module lacks detailed information about group permissions.
+While CyberArk provides a mechanism to access more comprehensive data, it's important to clarify that this solution is not an official part of the CyberArk product. It serves as an illustrative example of how to extract specific data from raw log files.
+Furthermore, when nested groups are discovered within privileged groups, the provided script only identifies the nested group. It falls upon the client to determine which Active Directory users are members of that group.
+Automating this enhanced solution for Windows domain scanning can be a complex and challenging task, and in some cases, it may be impossible to fully automate.
