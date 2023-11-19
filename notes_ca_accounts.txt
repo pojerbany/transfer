@@ -1,0 +1,26 @@
+
+PVWA Users rotation 3600 minut
+https://cyberark.my.site.com/s/article/00002775
+
+
+PSMApp user rotation - 24h
+https://cyberark.my.site.com/s/article/Uncheck-Password-Never-Expires-flag-for-PSMApp-hostname-and-PSMGw-hostname-Users
+
+
+PTA - everynight 24h
+https://cyberark.my.site.com/s/article/Uncheck-Password-Never-Expires-flag-for-PTAUser-and-PTAAppUser
+
+
+
+Other usefull
+https://cyberark.my.site.com/s/article/Built-In-Users-and-Groups
+
+https://cyberark.my.site.com/s/article/Cred-File-Reset-Article-List
+
+https://cyberark.my.site.com/s/article/How-do-I-set-the-password-policy
+
+https://cyberark.my.site.com/s/article/00004936
+
+https://cyberark.my.site.com/s/article/How-to-Secure-PSMConnect-and-PSMAdminConnect-Accounts
+
+https://cyberark.my.site.com/s/article/Reason-for-apigw-ini-file-on-PVWA
