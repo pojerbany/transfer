@@ -1,25 +1,2 @@
-2.1
 
-The module connects to target Linux servers via the network, using the SSH protocol and a service account.
-
-Once successfully connected, the module attempts to gather audit data related to user accounts on every server that was connected to successfully.
-
-In brief, the module aims to retrieve all configured accounts, categorize them as privileged or not based on group membership, and determine whether the user has configured any public SSH keys.
-
-2.2.2 Account Discovery Feed
-Preparation of the appropriate host list to be scanned by the CMDB team. The data should be provided in the form of a CSV file containing all IP addresses. This list should be delivered whenever a scan needs to be performed. Collaboration must be established, and processes should be created.
-
-2.2.3 Infrastructure Dependencies:
-Network ports must be opened for the entire Linux infrastructure on port 22. If the Linux infrastructure is hardened and the port has been changed from the default one, additional challenges may arise, as scans must be performed multiple times based on the target server's port. The network team should prepare network rules in such a way that whenever a new segment is created, the appropriate port should be opened.
-
-3.1.2.3 CMDB Active Server List
-In contrast to the Linux scan, the CPM Account Discovery module can independently build a server list using active directory "computers" object data. However, to ensure that the scan has been conducted properly, it is necessary to validate the scanned server list against another appropriate CMDB list. There are several reasons for this:
-•	Lack of network ports opened at the network level.
-•	Lack of network ports opened at the server level.
-•	Lack of permissions.
-All of the above issues may only indicate that a server is unreachable, but this can often be expected behavior. For example, a server can still exist in the active directory as an object.
-
-
-
-Summary
-As described in this document, the implementation of the scanning module is not merely a matter of configuring the module as an on/off switch. It requires extensive collaboration with infrastructure teams, the CMDB team, and other stakeholders. Additionally, the question arises as to whether it makes sense to implement a new module that requires a significant amount of work if appropriate tools are already in place. It seems that the greatest added value is in scanning domain accounts, but only in the case of an extensive deployment, which involves building programmatic mechanisms to identify the precise nesting of groups.
+While non-vaulted and managed accounts may pose a minimal risk of unauthorized access and data breaches, implementing vaulting solutions and managed services can further enhance security measures to mitigate potential impacts.
