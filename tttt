@@ -1,2 +1,28 @@
-The capabilities of these tools closely resemble the native functionalities of the PVWA (Privileged Vault Web Access) Account Discovery module, as they utilize the same underlying binaries. However, they offer minor additional features, such as scanning mechanisms for identifying MSSQL database instances and the ability to uncover embedded credentials within data sources residing in WebSphere, WebLogic, and Ansible playbook servers running on Unix-based virtual machines (VMs) and excel file template which helps analyzing the findings.
-Since these tools are standalone, they provide only raw data, and the process of vault onboarding capabilities needs to be built from scratch.
+function Get-PolicyID {
+    # Add a param block to specify the input parameter
+    param (
+        [string]$xmlFile
+    )
+
+    # Load the XML file into a variable
+    $xml = new-object System.Xml.XmlDocument 
+    $file = resolve-path($xmlFile)
+    $xml.load($file)
+
+    # Get the <policy> nodes from the XML file
+    $policies = $xml.SelectNodes("//Policy")
+
+    # Create an empty list to store the ID values
+    $policyIDs = @()
+
+    # Loop through each <policy> node and get the ID attribute value
+    foreach ($policy in $policies) {
+        $policyID = $policy.GetAttribute("ID")
+        # Add the ID value to the list
+        $policyIDs += $policyID
+    }
+
+    # Output the list of ID values using Write-Output
+    Write-Output $policyIDs
+
+}
