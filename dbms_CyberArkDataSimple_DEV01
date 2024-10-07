@@ -1,0 +1,191 @@
+USE CyberArkDataSimple_DEV01;
+
+-- PersonalDetails Table
+CREATE TABLE PersonalDetails (
+    CyberArkId INT PRIMARY KEY,
+    firstName VARCHAR(255),
+    lastName VARCHAR(255),
+);
+
+-- Users Table
+CREATE TABLE ActiveUsers (
+    CyberArkId INT PRIMARY KEY,
+    username VARCHAR(255),
+	creationTimestamp DATETIME DEFAULT GETDATE(),
+    FOREIGN KEY (CyberArkId) REFERENCES PersonalDetails(CyberArkId),
+);
+
+-- HistoricalPersonalDetails Table
+CREATE TABLE HistoricalPersonalDetails (
+CREATE TABLE HistoricalPersonalDetails (
+    id INT IDENTITY(1,1) PRIMARY KEY,         -- Unique identifier for each historical record
+    CyberArkId INT NULL,                      -- CyberArk ID to reference the original user
+    firstName VARCHAR(255),                   -- First name of the user
+    lastName VARCHAR(255)                     -- Last name of the user
+);
+
+
+-- HistoricalActiveUsers Table
+CREATE TABLE HistoricalActiveUsers (
+    ID INT IDENTITY(1,1) PRIMARY KEY,         -- Unique identifier for each historical user record
+    CyberArkId INT,                           -- Reference to CyberArkID from HistoricalPersonalDetails
+    username VARCHAR(255),                    -- Username of the user
+    creationTimestamp DATETIME DEFAULT GETDATE(), -- Original timestamp when the user was created
+    archivedTimestamp DATETIME DEFAULT GETDATE(),  -- Timestamp when the record was archived
+    FOREIGN KEY (ID) REFERENCES HistoricalPersonalDetails(ID) -- FK to HistoricalPersonalDetails
+);
+
+
+
+--- archive procedure
+
+GO
+/****** Object:  StoredProcedure [dbo].[ArchiveAndDeleteUser]    Script Date: 06.10.2024 07:58:24 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+ALTER   PROCEDURE [dbo].[ArchiveAndDeleteUser]
+    @CyberArkId INT  -- The CyberArkId of the user to be archived and deleted
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Declare variables to hold user details
+    DECLARE @firstName VARCHAR(255);
+    DECLARE @lastName VARCHAR(255);
+    DECLARE @username VARCHAR(255);
+    DECLARE @currentTimestamp DATETIME;
+    
+    -- Get the current timestamp
+    SET @currentTimestamp = GETDATE();
+
+    -- Retrieve user's personal details
+    SELECT 
+        @firstName = firstName,
+        @lastName = lastName
+    FROM 
+        PersonalDetails
+    WHERE 
+        CyberArkId = @CyberArkId;
+
+    -- Retrieve the username from ActiveUsers
+    SELECT 
+        @username = username
+    FROM 
+        ActiveUsers
+    WHERE 
+        CyberArkId = @CyberArkId;
+
+    -- Check if the user exists in ActiveUsers and PersonalDetails
+    IF @username IS NULL OR @firstName IS NULL
+    BEGIN
+        PRINT 'User not found in ActiveUsers or PersonalDetails.';
+        RETURN;  -- Exit the procedure if user does not exist
+    END
+
+    -- Archive the PersonalDetails
+    INSERT INTO HistoricalPersonalDetails (CyberArkId, firstName, lastName)
+    VALUES (@CyberArkId, @firstName, @lastName);
+
+    -- Archive the ActiveUsers
+    INSERT INTO HistoricalActiveUsers (CyberArkId, username, creationTimestamp, archivedTimestamp)
+    VALUES (@CyberArkId, @username, @currentTimestamp, @currentTimestamp);
+
+    -- Delete the user from ActiveUsers
+    DELETE FROM ActiveUsers
+    WHERE CyberArkId = @CyberArkId;
+
+    -- Delete the user's personal details from PersonalDetails
+    DELETE FROM PersonalDetails
+    WHERE CyberArkId = @CyberArkId;
+
+END;
+
+
+
+-- Insert data into PersonalDetails
+INSERT INTO PersonalDetails (CyberArkId, firstName, lastName)
+VALUES 
+(1, 'John', 'Doe'),
+(2, 'Jane', 'Smith'),
+(3, 'David', 'Johnson'),
+(4, 'Emily', 'Brown'),
+(5, 'Michael', 'Davis'),
+(6, 'Sarah', 'Miller'),
+(7, 'Chris', 'Wilson'),
+(8, 'Anna', 'Moore'),
+(9, 'Robert', 'Taylor'),
+(10, 'Laura', 'Anderson');
+
+
+
+-- Insert data into ActiveUsers
+INSERT INTO ActiveUsers (CyberArkId, username)
+VALUES 
+(1, 'johndoe'),
+(2, 'janesmith'),
+(3, 'davidjohnson'),
+(4, 'emilybrown'),
+(5, 'michaeldavis'),
+(6, 'sarahmiller'),
+(7, 'chriswilson'),
+(8, 'annamoore'),
+(9, 'roberttaylor'),
+(10, 'lauraanderson');
+
+
+
+
+### Selects current
+
+SELECT 
+    AU.CyberArkId AS UserID,
+    AU.username,
+    PD.firstName,
+    PD.lastName,
+    AU.creationTimestamp
+FROM 
+    ActiveUsers AU
+JOIN 
+    PersonalDetails PD 
+ON 
+    AU.CyberArkId = PD.CyberArkId;
+	
+
+#### Select historical
+
+SELECT 
+    hau.ID AS HistoricalUserID,
+    hau.CyberArkId, 
+    hau.username, 
+    hpd.firstName, 
+    hpd.lastName,
+	hau.creationTimestamp,
+    hau.archivedTimestamp
+FROM 
+    HistoricalActiveUsers hau
+JOIN 
+    HistoricalPersonalDetails hpd ON hau.CyberArkId = hpd.CyberArkId;
+	
+### Manualy delete user from Users.
+
+EXEC ArchiveAndDeleteUser @CyberArkId = 1;
+
+
+
+
+### Declare manual record in HistoricalActiveUsers
+DECLARE @CyberArkId INT = 66;
+DECLARE @firstName VARCHAR(255) = 'michal';
+DECLARE @lastName VARCHAR(255)= 'prokop'; 
+DECLARE @username VARCHAR(255)= 'mprokop@gmail.com'; 
+DECLARE @currentTimestamp DATETIME = CURRENT_TIMESTAMP;
+DECLARE @historicalPersonalDetailsID INT = 77;
+
+INSERT INTO HistoricalActiveUsers (CyberArkId, username, creationTimestamp, archivedTimestamp) VALUES (@CyberArkId, @username, @currentTimestamp, @currentTimestamp);
+
+###
+
+
