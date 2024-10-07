@@ -1,4 +1,0 @@
-Before provisioning accounts to the vault, an analysis of the potential effects of such onboarding must be conducted to avoid disrupting user access or services due to existing dependencies. This module provides basic analysis mechanisms through the PVWA web interface. However, in the case of banks, it seems that using third-party tools may be a better solution. To achieve this, the module offers the ability to export data through an API.
-
-
-After conducting the impact analysis, we should proceed with onboarding accounts into the vault. This onboarding process can be performed manually by an administrator or triggered by a third-party system using the API. In the future, when the process matures, it is also possible to leverage CyberArk's native mechanisms for automatic provisioning based on the foundational rules presented in the image below.
