@@ -1,1 +1,44 @@
-abc
+# Define the OU from which to retrieve the groups
+$ou = "OU=Groups,DC=YourDomain,DC=com"
+
+# Initialize an array to hold all group data
+$groupData = @()
+
+# Get all groups in the specified OU
+$groups = Get-ADGroup -Filter * -SearchBase $ou
+
+# Iterate over each group and get their members
+foreach ($group in $groups) {
+    # Create a custom object to hold group and member information
+    $groupObject = @{
+        GroupName = $group.Name
+        Members   = @()
+    }
+
+    # Get group membership
+    $members = Get-ADGroupMember -Identity $group
+
+    # Check if the group has any members
+    if ($members.Count -gt 0) {
+        # Add each member's name to the Members array
+        foreach ($member in $members) {
+            $groupObject.Members += @{
+                MemberName = $member.Name
+                ObjectType = $member.objectClass
+            }
+        }
+    }
+
+    # Add the group object to the groupData array
+    $groupData += $groupObject
+}
+
+# Convert the group data array to JSON
+$jsonOutput = $groupData | ConvertTo-Json -Depth 3
+
+# Save the JSON output to a file in the current directory
+$path = "$PSScriptRoot\GroupMembership.json"
+$jsonOutput | Out-File -FilePath $path
+
+# Inform the user where the file is saved
+Write-Host "Group membership information saved to $path"
