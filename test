@@ -1,3 +1,94 @@
+param (
+    [string]$Env
+)
+
+# Check if Env parameter is provided
+if (-not $Env) {
+    Write-Output "No environment specified. Use the -Env flag to specify an environment (DEV, PROD, QA)."
+    exit
+}
+
+# Define path to the config file (using $PSScriptRoot for portability)
+$configFilePath = "$PSScriptRoot\config\config.ini"
+
+# Function to parse the INI file for a specific environment
+function Parse-IniFileForEnv {
+    param (
+        [string]$filePath,
+        [string]$environment
+    )
+
+    $iniContent = Get-Content -Path $filePath -ErrorAction Stop
+    $config = @{}
+    $sectionFound = $false
+
+    foreach ($line in $iniContent) {
+        # Trim whitespace from start and end of line
+        $line = $line.Trim()
+
+        # Ignore comments and empty lines
+        if ($line -match '^\s*;') { continue }
+        if ($line -eq '') { continue }
+
+        # Look for the specified section header, e.g., [DEV]
+        if ($line -match "^\[$environment\]") {
+            $sectionFound = $true
+            continue
+        }
+
+        # Exit the loop once we reach the next section
+        if ($line -match '^\[' -and $sectionFound) {
+            break
+        }
+
+        # If we are in the right section, look for specific variables
+        if ($sectionFound -and $line -match '^\s*(.+?)\s*=\s*(.+?)\s*$') {
+            $key, $value = $matches[1], $matches[2]
+
+            # Only capture specific required keys
+            if ($key -in @("identityDomain", "PCloudDomain", "PVWAMasterPolicy")) {
+                $config[$key] = $value
+            }
+        }
+    }
+
+    # Check if the section was found and required keys are present
+    if (-not $sectionFound) {
+        Write-Output "Environment '$environment' not found in config file."
+        exit 1
+    }
+
+    # Verify all required keys are present
+    $requiredKeys = @("identityDomain", "PCloudDomain", "PVWAMasterPolicy")
+    foreach ($key in $requiredKeys) {
+        if (-not $config.ContainsKey($key)) {
+            Write-Output "Missing required configuration key '$key' in environment '$environment'."
+            exit 1
+        }
+    }
+
+    return $config
+}
+
+# Parse the INI file for the specified environment
+try {
+    $envConfig = Parse-IniFileForEnv -filePath $configFilePath -environment $Env
+    Write-Output "Configuration for environment '$Env' loaded successfully."
+} catch {
+    Write-Output "Failed to load configuration: $_"
+    exit 1
+}
+
+# Access and output the specific configuration values
+Write-Output "identityDomain: $($envConfig['identityDomain'])"
+Write-Output "PCloudDomain: $($envConfig['PCloudDomain'])"
+Write-Output "PVWAMasterPolicy: $($envConfig['PVWAMasterPolicy'])"
+
+
+######################################
+
+
+
 # Define the path to the config file
 $configFilePath = ".\config.ini"
 
