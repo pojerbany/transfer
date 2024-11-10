@@ -1,3 +1,52 @@
+# Define paths to JSON file and exclusion list file
+$jsonFilePath = "C:\path\to\yourfile.json"
+$exclusionsFilePath = "C:\path\to\exclusions.txt"
+
+# Load JSON data
+$jsonData = Get-Content -Path $jsonFilePath -Raw | ConvertFrom-Json
+
+# Load exclusions into a list
+$exclusions = Get-Content -Path $exclusionsFilePath -ErrorAction SilentlyContinue | ForEach-Object { $_.Trim() }
+
+# Ensure we have a "value" array in JSON
+if ($jsonData.value -is [System.Collections.IEnumerable]) {
+    # Extract safes from the JSON array and filter by exclusions
+    $safes = $jsonData.value | Where-Object {
+        # Make sure the item has a safe name property
+        $_.safeName -and (-not ($_.safeName -in $exclusions))
+    } | Select-Object -ExpandProperty safeName
+
+    # Initialize result arrays
+    $safesWithoutR = @{}
+    $missingCorrespondingR = @()
+
+    # Populate safes without -r and search for corresponding -r safe
+    foreach ($safe in $safes) {
+        if ($safe -notlike "*-r") {
+            $safesWithoutR[$safe] = $true # Use hash table for efficient lookup
+            $correspondingSafeWithR = "$safe-r"
+            
+            # Check if the corresponding -r safe exists
+            if ($correspondingSafeWithR -notin $safes) {
+                $missingCorrespondingR += $safe
+            }
+        }
+    }
+
+    # Output summary of safes without corresponding -r
+    if ($missingCorrespondingR.Count -eq 0) {
+        Write-Output "All safes have corresponding -r entries."
+    } else {
+        Write-Output "Safes without corresponding -r entries:"
+        $missingCorrespondingR | ForEach-Object { Write-Output "- $_" }
+    }
+} else {
+    Write-Output "The JSON file does not contain a 'value' array."
+}
+
+
+###############
+
 param (
     [string]$Env
 )
