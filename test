@@ -2,7 +2,36 @@ Introduction
 
 Purpose of the Break Glass Procedure
 Scope and Applicability
+
+The break glass procedure provides a controlled approach for gaining emergency access to critical systems and resources during exceptional situations. This procedure is applicable only when standard access mechanisms are unavailable or insufficient to address urgent operational needs.
+
+Scope
+Purpose: This process is designed to allow rapid, temporary access to essential resources, enabling swift response to high-impact incidents or critical disruptions.
+Key Resources: Break glass procedures apply to core systems, applications, and data repositories that are vital to business continuity.
+Controlled Access: Access obtained through this procedure is carefully managed, temporary, and subject to strict security and audit requirements to protect organizational assets and data.
+Applicability
+Emergency Situations Only: Break glass access should be used exclusively in emergencies where timely access is necessary to prevent or mitigate major operational impacts.
+Authorized Personnel: Only designated personnel are permitted to initiate, approve, and manage break glass access requests.
+Temporary Nature: Access granted via the break glass process must be revoked promptly after the issue is resolved, with a review to assess the actions taken.
+This procedure ensures that emergency access remains secure, monitored, and compliant with organizational policies, supporting business continuity without compromising security.
+
+
 Key Definitions (e.g., "break glass", "emergency access")
+
+Break Glass: A controlled procedure allowing emergency access to critical systems or resources when standard access mechanisms are unavailable or insufficient to address urgent needs. This access is temporary, granted only under specific conditions, and subject to strict monitoring and review.
+
+Emergency Access: Temporary privileged access granted during high-impact incidents or critical situations to authorized personnel, enabling them to restore or maintain essential operations.
+
+Authorized Personnel: Individuals designated by the organization as responsible for initiating, approving, and managing break glass access. These personnel typically include system administrators, security officers, and other key roles essential for managing emergencies.
+
+Critical Systems: Key systems, applications, and resources essential for business continuity and operational stability. Access to these systems is tightly controlled, with break glass procedures applied only under exceptional circumstances.
+
+Compliance Controls: Security measures and auditing processes in place to ensure that break glass access adheres to organizational policies, industry regulations, and audit requirements.
+
+Audit and Monitoring: The tracking and logging of all actions performed during break glass access to ensure transparency, accountability, and compliance. This includes real-time monitoring, as well as post-incident reviews.
+
+Post-Incident Review: A formal evaluation conducted after a break glass event to document actions taken, assess the impact, identify areas for improvement, and ensure lessons learned are incorporated into future procedures.
+
 Roles and Responsibilities
 
 Key personnel responsible for initiating, approving, and monitoring break glass access
