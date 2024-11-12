@@ -1,238 +1,37 @@
-# Define paths to JSON file and exclusion list file
-$jsonFilePath = "C:\path\to\yourfile.json"
-$exclusionsFilePath = "C:\path\to\exclusions.txt"
+Introduction
 
-# Load JSON data
-$jsonData = Get-Content -Path $jsonFilePath -Raw | ConvertFrom-Json
+Purpose of the Break Glass Procedure
+Scope and Applicability
+Key Definitions (e.g., "break glass", "emergency access")
+Roles and Responsibilities
 
-# Load exclusions into a list
-$exclusions = Get-Content -Path $exclusionsFilePath -ErrorAction SilentlyContinue | ForEach-Object { $_.Trim() }
+Key personnel responsible for initiating, approving, and monitoring break glass access
+Summary of roles (e.g., System Administrator, Security Officer, Compliance Officer)
+Conditions for Initiating Break Glass
 
-# Ensure we have a "value" array in JSON
-if ($jsonData.value -is [System.Collections.IEnumerable]) {
-    # Extract safes from the JSON array and filter by exclusions
-    $safes = $jsonData.value | Where-Object {
-        # Make sure the item has a safe name property
-        $_.safeName -and (-not ($_.safeName -in $exclusions))
-    } | Select-Object -ExpandProperty safeName
+Criteria for determining when break glass access is necessary
+Examples of situations requiring break glass (e.g., system outage, security breach)
+Break Glass Process Overview
 
-    # Initialize result arrays
-    $safesWithoutR = @{}
-    $missingCorrespondingR = @()
+Step-by-step high-level process for requesting, granting, and revoking access
+Expected duration and temporary nature of break glass access
+Summary of controls to be enforced (e.g., logging, multi-factor authentication)
+Security and Compliance Controls
 
-    # Populate safes without -r and search for corresponding -r safe
-    foreach ($safe in $safes) {
-        if ($safe -notlike "*-r") {
-            $safesWithoutR[$safe] = $true # Use hash table for efficient lookup
-            $correspondingSafeWithR = "$safe-r"
-            
-            # Check if the corresponding -r safe exists
-            if ($correspondingSafeWithR -notin $safes) {
-                $missingCorrespondingR += $safe
-            }
-        }
-    }
+Required controls during break glass events (e.g., logging, monitoring)
+Compliance considerations (e.g., regulatory requirements, auditability)
+Secure storage and handling of credentials
+Post-Incident Review and Documentation
 
-    # Output summary of safes without corresponding -r
-    if ($missingCorrespondingR.Count -eq 0) {
-        Write-Output "All safes have corresponding -r entries."
-    } else {
-        Write-Output "Safes without corresponding -r entries:"
-        $missingCorrespondingR | ForEach-Object { Write-Output "- $_" }
-    }
-} else {
-    Write-Output "The JSON file does not contain a 'value' array."
-}
+Process for reviewing break glass events after they occur
+Steps for documenting access, actions taken, and lessons learned
+Responsibilities for post-incident analysis and continuous improvement
+Communication and Escalation Procedures
 
+Guidelines for notifying relevant stakeholders during a break glass event
+Escalation paths for unresolved issues or extended access needs
+Appendices (if needed)
 
-###############
-
-param (
-    [string]$Env
-)
-
-# Check if Env parameter is provided
-if (-not $Env) {
-    Write-Output "No environment specified. Use the -Env flag to specify an environment (DEV, PROD, QA)."
-    exit
-}
-
-# Define path to the config file (using $PSScriptRoot for portability)
-$configFilePath = "$PSScriptRoot\config\config.ini"
-
-# Function to parse the INI file for a specific environment
-function Parse-IniFileForEnv {
-    param (
-        [string]$filePath,
-        [string]$environment
-    )
-
-    $iniContent = Get-Content -Path $filePath -ErrorAction Stop
-    $config = @{}
-    $sectionFound = $false
-
-    foreach ($line in $iniContent) {
-        # Trim whitespace from start and end of line
-        $line = $line.Trim()
-
-        # Ignore comments and empty lines
-        if ($line -match '^\s*;') { continue }
-        if ($line -eq '') { continue }
-
-        # Look for the specified section header, e.g., [DEV]
-        if ($line -match "^\[$environment\]") {
-            $sectionFound = $true
-            continue
-        }
-
-        # Exit the loop once we reach the next section
-        if ($line -match '^\[' -and $sectionFound) {
-            break
-        }
-
-        # If we are in the right section, look for specific variables
-        if ($sectionFound -and $line -match '^\s*(.+?)\s*=\s*(.+?)\s*$') {
-            $key, $value = $matches[1], $matches[2]
-
-            # Only capture specific required keys
-            if ($key -in @("identityDomain", "PCloudDomain", "PVWAMasterPolicy")) {
-                $config[$key] = $value
-            }
-        }
-    }
-
-    # Check if the section was found and required keys are present
-    if (-not $sectionFound) {
-        Write-Output "Environment '$environment' not found in config file."
-        exit 1
-    }
-
-    # Verify all required keys are present
-    $requiredKeys = @("identityDomain", "PCloudDomain", "PVWAMasterPolicy")
-    foreach ($key in $requiredKeys) {
-        if (-not $config.ContainsKey($key)) {
-            Write-Output "Missing required configuration key '$key' in environment '$environment'."
-            exit 1
-        }
-    }
-
-    return $config
-}
-
-# Parse the INI file for the specified environment
-try {
-    $envConfig = Parse-IniFileForEnv -filePath $configFilePath -environment $Env
-    Write-Output "Configuration for environment '$Env' loaded successfully."
-} catch {
-    Write-Output "Failed to load configuration: $_"
-    exit 1
-}
-
-# Access and output the specific configuration values
-Write-Output "identityDomain: $($envConfig['identityDomain'])"
-Write-Output "PCloudDomain: $($envConfig['PCloudDomain'])"
-Write-Output "PVWAMasterPolicy: $($envConfig['PVWAMasterPolicy'])"
-
-
-######################################
-
-
-
-# Define the path to the config file
-$configFilePath = ".\config.ini"
-
-# Function to parse the INI file
-function Parse-IniFile {
-    param (
-        [string]$filePath
-    )
-
-    $iniContent = Get-Content -Path $filePath -ErrorAction Stop
-    $config = @{}
-    $section = $null
-
-    foreach ($line in $iniContent) {
-        # Remove any whitespace from the start and end of the line
-        $line = $line.Trim()
-
-        # Ignore empty lines or comments
-        if ($line -match '^\s*;') { continue }
-        if ($line -eq '') { continue }
-
-        # Check for section header, e.g., [DEV]
-        if ($line -match '^\[(.+?)\]') {
-            $section = $matches[1]
-            $config[$section] = @{}
-        }
-        # Check for key-value pairs within a section, e.g., pamfqdn=https://someaddress.com
-        elseif ($line -match '^\s*(.+?)\s*=\s*(.+?)\s*$' -and $section) {
-            $key, $value = $matches[1], $matches[2]
-            $config[$section][$key] = $value
-        }
-    }
-
-    return $config
-}
-
-# Parse the INI file
-try {
-    $config = Parse-IniFile -filePath $configFilePath
-    Write-Output "Configuration loaded successfully."
-} catch {
-    Write-Output "Failed to load configuration: $_"
-    exit 1
-}
-
-# Access configuration values
-$environment = "DEV"  # Example: specify the environment
-Write-Output "PAM FQDN for $environment: $($config[$environment]['pamfqdn'])"
-Write-Output "Username for $environment: $($config[$environment]['username'])"
-Write-Output "Password for $environment: $($config[$environment]['password'])"
-
-
-#############################################
-
-# Define the OU from which to retrieve the groups
-$ou = "OU=Groups,DC=YourDomain,DC=com"
-
-# Initialize an array to hold all group data
-$groupData = @()
-
-# Get all groups in the specified OU
-$groups = Get-ADGroup -Filter * -SearchBase $ou
-
-# Iterate over each group and get their members
-foreach ($group in $groups) {
-    # Create a custom object to hold group and member information
-    $groupObject = @{
-        GroupName = $group.Name
-        Members   = @()
-    }
-
-    # Get group membership
-    $members = Get-ADGroupMember -Identity $group
-
-    # Check if the group has any members
-    if ($members.Count -gt 0) {
-        # Add each member's name to the Members array
-        foreach ($member in $members) {
-            $groupObject.Members += @{
-                MemberName = $member.Name
-                ObjectType = $member.objectClass
-            }
-        }
-    }
-
-    # Add the group object to the groupData array
-    $groupData += $groupObject
-}
-
-# Convert the group data array to JSON
-$jsonOutput = $groupData | ConvertTo-Json -Depth 3
-
-# Save the JSON output to a file in the current directory
-$path = "$PSScriptRoot\GroupMembership.json"
-$jsonOutput | Out-File -FilePath $path
-
-# Inform the user where the file is saved
-Write-Host "Group membership information saved to $path"
+Glossary of Terms
+Contact Information
+Quick Reference Guide for Initiating Break Glass Access
