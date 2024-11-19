@@ -14,6 +14,43 @@ $filteredSafes = $safeNames | Where-Object { $excludedSafes -notcontains $_ }
 $unpairedSafes = @()
 $filteredSafes | ForEach-Object {
     $safe = $_
+
+    # Determine the counterpart of the current safe
+    $pair = if ($safe -like "*-r") { $safe -replace "-r", "" } else { "$safe-r" }
+
+    # Check if the counterpart exists in the filtered safes
+    if (($filteredSafes -contains $pair) -or ($safe -like "*-r" -and $filteredSafes -contains ($safe -replace "-r", ""))) {
+        # Safe is paired; do nothing
+        return
+    } else {
+        # Safe is unpaired
+        $unpairedSafes += $safe
+    }
+}
+
+# Step 4: Output safes without a pair
+Write-Host "Safes without pairs:"
+$unpairedSafes | ForEach-Object { Write-Host $_ }
+
+######################
+
+
+# Paths to input files
+$jsonFilePath = "C:\path\to\your\input.json"
+$exclusionListFilePath = "C:\path\to\exclusions.txt"
+
+# Step 1: Read the JSON file and extract safeNames
+$jsonData = Get-Content -Path $jsonFilePath | ConvertFrom-Json
+$safeNames = @($jsonData | ForEach-Object { $_.value.safeName })
+
+# Step 2: Read the exclusion list and filter out excluded safes
+$excludedSafes = Get-Content -Path $exclusionListFilePath
+$filteredSafes = $safeNames | Where-Object { $excludedSafes -notcontains $_ }
+
+# Step 3: Identify safes without pairs
+$unpairedSafes = @()
+$filteredSafes | ForEach-Object {
+    $safe = $_
     $pair = if ($safe -like "*-r") { $safe -replace "-r", "" } else { "$safe-r" }
     if ($filteredSafes -notcontains $pair) {
         $unpairedSafes += $safe
