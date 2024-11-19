@@ -1,86 +1,25 @@
-Step 1: Create an INF File for the CSR
-First, create an INF file that specifies the details of your certificate request. This file defines properties such as the subject name (e.g., your server's domain name), key length, and hashing algorithm.
+# Paths to input files
+$jsonFilePath = "C:\path\to\your\input.json"
+$exclusionListFilePath = "C:\path\to\exclusions.txt"
 
-Open Notepad or any text editor.
+# Step 1: Read the JSON file and extract safeNames
+$jsonData = Get-Content -Path $jsonFilePath | ConvertFrom-Json
+$safeNames = @($jsonData | ForEach-Object { $_.value.safeName })
 
-Copy the following content into the editor, replacing yourdomain.com and any other fields as necessary:
+# Step 2: Read the exclusion list and filter out excluded safes
+$excludedSafes = Get-Content -Path $exclusionListFilePath
+$filteredSafes = $safeNames | Where-Object { $excludedSafes -notcontains $_ }
 
-[Version]
-Signature="$Windows NT$"
+# Step 3: Identify safes without pairs
+$unpairedSafes = @()
+$filteredSafes | ForEach-Object {
+    $safe = $_
+    $pair = if ($safe -like "*-r") { $safe -replace "-r", "" } else { "$safe-r" }
+    if ($filteredSafes -notcontains $pair) {
+        $unpairedSafes += $safe
+    }
+}
 
-[NewRequest]
-Subject = "CN=yourdomain.com, O=Your Organization, L=Your Location, S=Your State, C=Your Country"
-KeySpec = 1
-KeyLength = 2048
-Exportable = TRUE
-MachineKeySet = TRUE
-SMIME = FALSE
-PrivateKeyArchive = FALSE
-UserProtected = FALSE
-UseExistingKeySet = FALSE
-ProviderName = "Microsoft RSA SChannel Cryptographic Provider"
-HashAlgorithm = SHA256
-RequestType = PKCS10
-
-[EnhancedKeyUsageExtension]
-OID=1.3.6.1.5.5.7.3.1 ; Server Authentication
-OID=1.3.6.1.5.5.7.3.2 ; Client Authentication
-
-Subject: This specifies the certificate's subject name. Modify CN=yourdomain.com to the appropriate Common Name (e.g., the fully qualified domain name of the server).
-KeyLength: Use 2048 for a standard RSA key or adjust to your preferred size.
-HashAlgorithm: Set to SHA256 (recommended for security).
-Save the file as request.inf in a location you’ll remember (e.g., C:\Certificates\request.inf).
-
-Step 2: Generate the CSR Using certreq.exe
-With the INF file created, you can now generate the CSR.
-
-Open PowerShell as Administrator.
-
-Run the following command, replacing the paths as needed:
-
-powershell
-Copy code
-certreq -new C:\Certificates\request.inf C:\Certificates\myrequest.csr
-request.inf: The INF file you created earlier.
-myrequest.csr: This is the CSR file that will be generated.
-After running this command, check the folder for the file myrequest.csr. This is your CSR, ready for submission.
-
-Step 3: Submit the CSR to Your Organization’s PKI (CA)
-Now, submit your CSR to the Certificate Authority (CA) within your organization’s PKI infrastructure. This can typically be done through:
-
-Web Enrollment (if available):
-
-If your organization has a CA web enrollment portal, navigate to it (e.g., http://<CA_Server_Name>/certsrv).
-Select Request a certificate > Advanced certificate request > Submit a certificate request by using a base-64-encoded CMC or PKCS #10 file.
-Open myrequest.csr in a text editor, copy the contents, and paste it into the text box in the web form.
-Choose the appropriate certificate template (such as Web Server or Computer) if prompted, and submit the request.
-Direct Submission to the CA Administrator:
-
-If there is no web enrollment, email or otherwise send the CSR file (myrequest.csr) to the PKI administrator in your organization who manages the CA. They can process the request manually and issue the certificate.
-Step 4: Download and Install the Issued Certificate
-Once the CA processes your CSR, you will receive a signed certificate. This will typically come as a .cer file or a .crt file.
-
-Save the Certificate:
-
-Save the certificate file (e.g., mycertificate.cer) in the same folder as your private key (C:\Certificates).
-Install the Certificate:
-
-Use certreq.exe to install the certificate and complete the request, binding the certificate with the private key that was created when you generated the CSR.
-powershell
-Copy code
-certreq -accept C:\Certificates\mycertificate.cer
-This command installs the certificate to the correct certificate store and links it with the existing private key.
-
-Verify the Certificate:
-
-Open Certificates MMC to ensure the certificate is installed:
-Press Win + R, type mmc, and press Enter.
-Go to File > Add/Remove Snap-in, select Certificates, and add it for the Computer account.
-Navigate to Certificates > Personal > Certificates and check for your new certificate under the Common Name you specified.
-Summary
-Create an INF file with details of the certificate request.
-Generate a CSR with certreq -new.
-Submit the CSR to your organization’s CA (via web enrollment or direct submission).
-Download and install the certificate with certreq -accept.
-Verify the certificate installation in the Certificates MMC.
-This process completes the CSR generation, submission, and certificate installation using PowerShell and the Windows certificate management tools. Let me know if you need further customization or details!
+# Step 4: Output safes without a pair
+Write-Host "Safes without pairs:"
+$unpairedSafes | ForEach-Object { Write-Host $_ }
