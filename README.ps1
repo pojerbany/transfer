@@ -1,74 +1,82 @@
-# Example input objects
-$objects = @(
-    @{
-        id = 1
-        name = "John"
-        platformAccountProperties = @{
-            property1 = "Value1"
-            property2 = "Value2"
-        }
-    },
-    @{
-        id = 2
-        name = "Jane"
-        platformAccountProperties = @{
-            property2 = "ValueX"
-            property3 = "ValueY"
-        }
-    }
-)
-
-# Collect all unique keys
-$allKeys = @{}
-foreach ($obj in $objects) {
-    # Add top-level keys
-    foreach ($key in $obj.Keys) {
-        if (-not $allKeys.ContainsKey($key)) {
-            $allKeys[$key] = $true
-        }
-
-        # Add nested keys dynamically
-        if ($key -eq "platformAccountProperties" -and $obj[$key] -is [hashtable]) {
-            foreach ($nestedKey in $obj[$key].Keys) {
-                $flattenedKey = "platformAccountProperties.$nestedKey"
-                if (-not $allKeys.ContainsKey($flattenedKey)) {
-                    $allKeys[$flattenedKey] = $true
-                }
-            }
-        }
-    }
-}
-
-# Generate ordered header list
-$headers = $allKeys.Keys
-
-# Function to flatten an object
+# Function to recursively flatten an object
 function Flatten-Object {
     param (
         [hashtable]$obj,
-        [array]$headers
+        [string]$prefix = "" # Prefix for nested keys
     )
-
     $flatObject = @{}
-    foreach ($header in $headers) {
-        if ($header -like "platformAccountProperties.*") {
-            # Extract the nested key
-            $nestedKey = $header -replace "platformAccountProperties\.", ""
-            $flatObject[$header] = $obj["platformAccountProperties"][$nestedKey]
+
+    foreach ($key in $obj.Keys) {
+        $fullKey = if ($prefix) { "$prefix.$key" } else { $key }
+
+        if ($obj[$key] -is [hashtable]) {
+            # Recurse into nested hashtable
+            $nestedObject = Flatten-Object -obj $obj[$key] -prefix $fullKey
+            foreach ($nestedKey in $nestedObject.Keys) {
+                $flatObject[$nestedKey] = $nestedObject[$nestedKey]
+            }
         } else {
-            $flatObject[$header] = $obj[$header]
+            # Add the key-value pair to the flat object
+            $flatObject[$fullKey] = $obj[$key]
         }
     }
     return $flatObject
 }
 
-# Flatten all objects
+# Example nested objects
+$objects = @(
+    @{
+        id = 1
+        name = "John"
+        details = @{
+            age = 30
+            address = @{
+                street = "123 Main St"
+                city = "New York"
+            }
+        }
+    },
+    @{
+        id = 2
+        name = "Jane"
+        details = @{
+            age = 25
+            address = @{
+                street = "456 Elm St"
+                state = "CA"
+            }
+        }
+    }
+)
+
+# Collect all unique flattened keys
+$allKeys = @{}
+foreach ($obj in $objects) {
+    $flattened = Flatten-Object -obj $obj
+    foreach ($key in $flattened.Keys) {
+        if (-not $allKeys.ContainsKey($key)) {
+            $allKeys[$key] = $true
+        }
+    }
+}
+
+# Create a sorted list of headers
+$headers = $allKeys.Keys | Sort-Object
+
+
+# Flatten all objects and populate rows
 $flattenedObjects = @()
 foreach ($obj in $objects) {
-    $flattenedObjects += Flatten-Object -obj $obj -headers $headers
+    $flattened = Flatten-Object -obj $obj
+
+    # Create a row with all headers, filling missing keys with null
+    $row = @{}
+    foreach ($header in $headers) {
+        $row[$header] = if ($flattened.ContainsKey($header)) { $flattened[$header] } else { $null }
+    }
+    $flattenedObjects += [PSCustomObject]$row
 }
 
 
-# Convert to CSV and export
+# Export to CSV
 $flattenedObjects | Export-Csv -Path "output.csv" -NoTypeInformation
-
