@@ -1,109 +1,165 @@
-# Break Glass Policy for PAM CyberArk System
+# ImportExcel module is required
+import-module -Name "C:\Users\donkablo\Downloads\importexcel.7.0.1\importexcel"
+# File paths
+$jsonFilePath = "C:\Users\donkablo\Documents\workspace\coding\powershell\importexcel\creative_users.json"
 
-## 1. Overview
+$date = (Get-Date).ToString("yyyy-MM-dd_HH-mm-ss")
 
-This policy defines the break glass procedures to be followed in scenarios where:
+$csvFilePath = "C:\Users\donkablo\Documents\workspace\coding\powershell\importexcel\users_$date.csv"
+$excelFilePath = "C:\Users\donkablo\Documents\workspace\coding\powershell\importexcel\users_$date.xlsx"
 
-- The PAM CyberArk system is completely unavailable.
-- One of the critical dependencies is unavailable.
+# Read the JSON file
+$json = Get-Content -Path $jsonFilePath -Raw | ConvertFrom-Json
 
-The policy ensures that privileged access management and related functions remain operable during incidents.
+# options
+# - safes
+# - users
 
-## 2. System Overview and Dependencies
+$struct = "users"
 
-The PAM CyberArk system includes:
+if ($struct -eq "safes") {
+    $flattened = $json.value | ForEach-Object {
+        [PSCustomObject]@{
+            SafeUrlId                = $_.safeUrlId
+            SafeName                 = $_.safeName
+            SafeNumber               = $_.safeNumber
+            CreatorId                = $_.creator.id
+            CreatorName              = $_.creator.name
+            Location                 = $_.location
+            NumberOfDaysRetention    = $_.numberOfDaysRetention
+            CreationTime             = (Get-Date -Date (Get-Date "1970-01-01 00:00:00Z").AddSeconds($_.creationTime)).ToLocalTime()
+            LastModificationTime     = (Get-Date -Date (Get-Date "1970-01-01 00:00:00Z").AddSeconds($_.lastModificationTime)).ToLocalTime()
+            IsExpiredMember          = $_.isExpiredMember
+        }
+    }
+}
 
-- **Frontend and Database**: Hosted in the cloud.
-- **On-Premises Components**: Supporting infrastructure integrated with dependencies.
+if ($struct -eq "users") {
+   # Assuming $json contains the JSON data already loaded
+    $flattened = $json.value | ForEach-Object {
+        $daysSinceLogin = (Get-Date) - (Get-Date -Date (Get-Date "1970-01-01 00:00:00Z").AddSeconds($_.lastSuccessfulLoginDate)).ToLocalTime()
+        [PSCustomObject]@{
+            EnableUser               = $_.enableUser
+            ChangePassOnNextLogon    = $_.changePassOnNextLogon
+            ExpiryDate               = (Get-Date -Date (Get-Date "1970-01-01 00:00:00Z").AddSeconds($_.expiryDate)).ToLocalTime()
+            Suspended                = $_.suspended
+            LastSuccessfulLoginDate  = (Get-Date -Date (Get-Date "1970-01-01 00:00:00Z").AddSeconds($_.lastSuccessfulLoginDate)).ToLocalTime()
+            PasswordNeverExpires     = $_.passwordNeverExpires
+            DistinguishedName        = $_.distinguishedName
+            Description              = $_.description
+            WorkStreet               = $_.businessAddress.workStreet
+            WorkCity                 = $_.businessAddress.workCity
+            WorkState                = $_.businessAddress.workState
+            WorkZip                  = $_.businessAddress.workZip
+            WorkCountry              = $_.businessAddress.workCountry
+            HomePage                 = $_.internet.homePage
+            HomeEmail                = $_.internet.homeEmail
+            BusinessEmail            = $_.internet.businessEmail
+            OtherEmail               = $_.internet.otherEmail
+            HomeNumber               = $_.phones.homeNumber
+            BusinessNumber           = $_.phones.businessNumber
+            CellularNumber           = $_.phones.cellularNumber
+            FaxNumber                = $_.phones.faxNumber
+            PagerNumber              = $_.phones.pagerNumber
+            Title                    = $_.personalDetails.title
+            Organization             = $_.personalDetails.organization
+            Department               = $_.personalDetails.department
+            Profession               = $_.personalDetails.profession
+            FirstName                = $_.personalDetails.firstName
+            MiddleName               = $_.personalDetails.middleName
+            LastName                 = $_.personalDetails.lastName
+            Groups                   = ($_.groupsMembership | ForEach-Object { $_.groupName }) -join ", "
+            AuthenticationMethod     = ($_.authenticationMethod -join ", ")
+            UnAuthorizedInterfaces   = ($_.unAuthorizedInterfaces -join ", ")
+            Id                       = $_.id
+            Username                 = $_.username
+            Source                   = $_.source
+            UserType                 = $_.userType
+            ComponentUser            = $_.componentUser
+            VaultAuthorization       = ($_.vaultAuthorization -join ", ")
+            Location                 = $_.location
+            _DaysBucket               = if ($daysSinceLogin.Days -le 30) { "0-30 Days" } `
+                                    elseif ($daysSinceLogin.Days -le 60) { "31-60 Days" } `
+                                    elseif ($daysSinceLogin.Days -le 90) { "61-90 Days" } `
+                                    else { "91+ Days" }
+        }
+    }
+    # Output the flattened objects
+    #$flattened | Format-Table -AutoSize
+}
 
-### Dependencies:
+# Output the flattened object
+$flattened | Export-Csv -Path "$csvFilePath " -NoTypeInformation
 
-- **Azure Entra ID (SAML)**: Authentication and Single Sign-On.
-- **Network**: Internal and external communication pathways.
-- **VMware**: Hosting critical infrastructure for PAM components.
-- **Office Domain**: Authentication and identity-related workflows.
-- **Protected Domains**: Target systems and services managed by PAM.
+$pt = [ordered]@{
+    pt1 = @{
+        SourceWorkSheet   = 'Users';
+        PivotTableName    = '30/60/90';
+        PivotRows         = "_DaysBucket";
+        PivotData         = @{"Username" = "count"};
+        IncludePivotChart = $true;
+        ChartType         = 'BarClustered3D';
+    };
+    pt2 = @{
+        SourceWorkSheet   = 'Users';
+        PivotTableName    = '30/60/90';
+        PivotRows         = "_DaysBucket";
+        PivotData         = @{"Username" = "count"};
+        IncludePivotChart = $true;
+        ChartType         = 'PieExploded3D';
+    }
+}
 
----
+$flattened | Export-Excel -Path $excelFilePath -WorksheetName 'Users' -TableName "Users" -TableStyle Medium1 -FreezeTopRow -Show -AutoSize 
 
-## 3. Break Glass Table: Scenarios and Pre-Break Glass Actions
+#Get-ExcelWorkbookInfo -Path $excelFilePath
+$workbook = Open-ExcelPackage -Path $excelFilePath -KillExcel
 
-### Table 1: Scenarios and Actions
+$worksheetName = "Report Navigation"
+Add-Worksheet -ExcelPackage $workbook -WorksheetName $worksheetName -MoveToStart 
+Set-ExcelRange -Worksheet $workbook.'Report Navigation' -Range "A1" -Value "Users sheet"
 
-| **Scenario**                                  | **Pre-Break Glass Actions**                                                                               |
-| --------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| **Complete PAM Unavailability**               | 1. Document emergency accounts outside PAM.<br>2. Ensure updated offline credential storage.                  |
-| **Azure Entra ID Unavailability**             | 1. Maintain local admin accounts for critical systems.<br>2. Preconfigure alternate authentication.           |
-| **Network Unavailability**                    | 1. Verify local admin account access.<br>2. Maintain network redundancy and failover policies.                |
-| **VMware Platform Unavailability**            | 1. Maintain backups of PAM components.<br>2. Configure alternate hosting options.                             |
-| **Office or Protected Domain Unavailability** | 1. Maintain admin account details in secure offline storage.<br>2. Define manual workflows for domain access. |
+$worksheet = $workbook.Workbook.Worksheets['Report Navigation']
 
----
 
-## 4. Break Glass Detailed Procedures
+# Add a big title
+$worksheet.Cells["A1"].Value = "Document Title: PAM Reporting"
+$worksheet.Cells["A1"].Style.Font.Size = 24                 # Set font size
+$worksheet.Cells["A1"].Style.Font.Bold = $true              # Bold the text
+$worksheet.Cells["A1"].Style.HorizontalAlignment = "Center" # Center align
+$worksheet.Cells["A1:D1"].Merge = $true                     # Merge cells for title
 
-### Table 2: Break Glass Procedures
+# Add document metrics below the title
+$worksheet.Cells["A2"].Value = "Document Metrics:"
+$worksheet.Cells["A2"].Style.Font.Size = 14
+$worksheet.Cells["A2"].Style.Font.Bold = $true
 
-#### 4.1 Complete PAM Unavailability
+# Add metrics
+$worksheet.Cells["A3"].Value = "Creation Date"
+$worksheet.Cells["B3"].Value = (Get-Date).ToString("yyyy-MM-dd")
+$worksheet.Cells["A4"].Value = "Author"
+$worksheet.Cells["B4"].Value = "XX"
+$worksheet.Cells["A5"].Value = "Version"
+$worksheet.Cells["B5"].Value = "1.0"
 
-| **Step** | **Procedure**                                                                                         |
-| -------- | ----------------------------------------------------------------------------------------------------- |
-| 1        | Authenticate using emergency admin accounts stored offline.                                           |
-| 2        | Access critical systems directly using manually documented credentials.                               |
-| 3        | Engage vendor support for CyberArk to troubleshoot and restore functionality.                         |
-| 4        | Revalidate privileged credentials updated during the incident within PAM once the system is restored. |
+Set-ExcelRange -Worksheet $workbook.'Report Navigation' -Range "G2" -Value "Link to Users"
 
-#### 4.2 Azure Entra ID Unavailability
+$worksheet.Cells["H2"].Hyperlink = "#Users!A1"
+$worksheet.Cells["H2"].value = "Click to go users tab"
 
-| **Step** | **Procedure**                                                                         |
-| -------- | ------------------------------------------------------------------------------------- |
-| 1        | Use preconfigured local admin accounts to access critical systems.                    |
-| 2        | Switch to alternate authentication mechanisms for cloud resources (if configured).    |
-| 3        | Notify impacted users and implement manual workflows for authentication.              |
-| 4        | Restore Azure Entra ID connectivity and reenable SAML authentication post-resolution. |
+$worksheet.Cells["H2"].Style.Font.Color.SetColor([System.Drawing.Color]::Blue)  # Set font color to blue
+$worksheet.Cells["H2"].Style.Font.UnderLine = $true                             # Underline the text
+$worksheet.Cells["H2"].Style.Font.Size = 12                                     # Set font size to 12
+$worksheet.Cells["H2"].Style.Font.Bold = $true                                  # Make the text bold
 
-#### 4.3 Network Unavailability
+Add-PivotTable -ExcelPackage $workbook `
+               -SourceWorkSheet $workbook.Users `
+               -PivotTableName "Inactive users 30/60/90" `
+               -Address $workbook.'Report Navigation'.Cells["I2"] `
+               -PivotRows "_DaysBucket" `
+               -PivotData @{"Username" = "count"} `
+               -Activate 
+             
+$worksheet.Cells.AutoFitColumns()
+Close-ExcelPackage $workbook 
 
-| **Step** | **Procedure**                                                                     |
-| -------- | --------------------------------------------------------------------------------- |
-| 1        | Use out-of-band network management tools to diagnose and resolve network issues.  |
-| 2        | Authenticate directly into on-premises PAM components using local admin accounts. |
-| 3        | Reestablish connectivity and verify PAM operational status.                       |
-
-#### 4.4 VMware Platform Unavailability
-
-| **Step** | **Procedure**                                                               |
-| -------- | --------------------------------------------------------------------------- |
-| 1        | Switch to backup or alternate hosting environment for PAM components.       |
-| 2        | Reconfigure network and service settings to point to the alternate hosting. |
-| 3        | Verify the functionality of restored services and components.               |
-
-#### 4.5 Office Domain or Protected Domain Unavailability
-
-| **Step** | **Procedure**                                                                            |
-| -------- | ---------------------------------------------------------------------------------------- |
-| 1        | Use emergency admin accounts for direct system access to impacted domains.               |
-| 2        | Implement manual workflows for identity verification and critical operations.            |
-| 3        | Engage domain recovery procedures, working with relevant teams to restore functionality. |
-
----
-
-## 5. Key Considerations
-
-1. **Emergency Account Management**: Emergency accounts must be periodically tested for validity.
-2. **Offline Credential Storage**: Credentials should be securely stored offline and updated following changes in privileged accounts.
-3. **Audit and Review**: Post-incident, all actions taken during break glass must be audited and reviewed for compliance.
-4. **Documentation and Communication**: Incident response and resolution steps must be documented and communicated to stakeholders.
-
----
-
-## 6. Periodic Testing
-
-Break glass procedures should be tested at least annually or after significant system updates to ensure readiness and effectiveness.
-
----
-
-## 7. Policy Approval
-
-This policy must be reviewed and approved by the IT Security team and stakeholders responsible for PAM operations.
-"""
