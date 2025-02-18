@@ -1,99 +1,27 @@
 #!/bin/bash
-# Script Name: save_passwd_to_json.sh
-# Description: Reads /etc/passwd and returns it as a JSON string using default libraries
-# Author: Your Name
-# Date: YYYY-MM-DD
-# Exit immediately if a command exits with a non-zero status
-set -e
-OUTPUT_FILE="passwd.json"
 
-# Script version
-VERSION="1.0"
+# Run dzinfo and extract roles
+roles=$(dzinfo --roles | awk 'NR>2 {print $1}') # Skips header lines
 
-# Function to get sudo users based on distribution
-getSudoUsers() {
-    local distro_id=$(cat /etc/os-release | grep "^ID=" | cut -d'=' -f2 | tr -d '"')
-    local sudo_group
-    local sudo_users
+# Convert roles to JSON format
+json_output="{\"roles\":["
 
-    case "$distro_id" in
-        "ubuntu"|"debian")
-            sudo_group="sudo"
-            ;;
-        "rhel"|"centos"|"fedora"|"rocky"|"almalinux")
-            sudo_group="wheel"
-            ;;
-        *)
-            sudo_group="sudo"  # default fallback
-            ;;
-    esac
-
-    # Get users from the appropriate sudo group
-    sudo_users=$(getent group $sudo_group | cut -d: -f4)
-    echo "$sudo_users"
-}
-
-# Read /etc/passwd and convert it to JSON format
-getPasswd() {
-    json="["
-    first_entry=true
-    # Get sudo users first
-    local sudo_users=$(getSudoUsers)
-    
-    while IFS=: read -r username password uid gid info home shell; do
-        if [ "$first_entry" = true ]; then
-            first_entry=false
+first=true
+while IFS= read -r role; do
+    if [ -n "$role" ]; then
+        if [ "$first" = true ]; then
+            first=false
         else
-            json+=","
+            json_output+=","
         fi
-        # Check if user is in sudo users list
-        if [[ "$sudo_users" == *"$username"* ]]; then
-            has_sudo="true"
-        else
-            has_sudo="false"
-        fi
-        
-        json+=$'\n      {'
-        json+=$'\n        "username": "'"$username"'",'
-        json+=$'\n        "uid": '"$uid"','
-        json+=$'\n        "gid": '"$gid"','
-        json+=$'\n        "info": "'"$info"'",'
-        json+=$'\n        "home": "'"$home"'",'
-        json+=$'\n        "shell": "'"$shell"'",'
-        json+=$'\n        "has_sudo": '"$has_sudo"''
-        json+=$'\n      }'
-    done < /etc/passwd
-    json+=$'\n    ]'
-    
-    echo "$json" 
-}
+        json_output+="\"$role\""
+    fi
+done <<< "$roles"
 
-# Main function
-main() {
-    echo "Converting /etc/passwd to JSON..."
-    # Get system information
-    hostname=$(hostname)
-    ip=$(hostname -I | awk '{print $1}')
-    fqdn=$(hostname -f)
-    distribution=$(cat /etc/os-release | grep "PRETTY_NAME" | cut -d'"' -f2)
-    
-    # Create the main JSON structure
-    passwd="{"
-    passwd+=$'\n  "script_version": "'"$VERSION"'",'
-    passwd+=$'\n  "hostname": "'"$hostname"'",'
-    passwd+=$'\n  "ip": "'"$ip"'",'
-    passwd+=$'\n  "fqdn": "'"$fqdn"'",'
-    passwd+=$'\n  "distribution": "'"$distribution"'",'
-    passwd+=$'\n  "passwd_entries": '
-    
-    # Get passwd data and add it to the main structure
-    temp=$(getPasswd)
-    passwd+="$temp"
-    passwd+=$'\n}'
-    
-    # Save to file
-    echo "$passwd" > "$OUTPUT_FILE"
-}
+json_output+="]}"
 
-# Execute main function
-main
+# Save to JSON file
+echo "$json_output" > roles.json
+
+# Print result
+cat roles.json
